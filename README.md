@@ -1,52 +1,61 @@
 # Crystal Bot
 
-Serveur Express pour recevoir les webhooks Messenger. Les événements valides
-sont actuellement journalisés ; le traitement des messages par Crystal Bot
-reste à brancher dans `src/app.js`.
+Bot Telegram écrit en TypeScript avec grammY. Les messages sont reçus en long
+polling : aucun serveur HTTP, domaine public ou tunnel Cloudflare n'est nécessaire.
 
-## Démarrage
+## Installation
 
-Prérequis : Node.js 22.9 ou supérieur, avec npm.
+Prérequis : Node.js 22.9 ou supérieur et npm.
 
 ```sh
 npm ci
 cp .env.example .env # uniquement si .env n'existe pas encore
 ```
 
-Renseigner dans `.env` :
+Créer un bot auprès de [@BotFather](https://t.me/BotFather), puis renseigner son
+token dans `.env` :
 
-- `PORT` : port HTTP, `3000` par défaut.
-- `MESSENGER_VERIFY_TOKEN` : jeton de votre choix, identique à celui configuré chez Meta.
-- `META_APP_SECRET` : secret de l'application Meta, utilisé pour vérifier les signatures.
-
-Le `.env` est chargé au démarrage et reste ignoré par Git. Les variables déjà
-définies dans l'environnement sont prioritaires. Le serveur refuse de démarrer
-si le jeton de vérification ou le secret Meta est vide.
-
-```sh
-npm start
-# Avec redémarrage automatique pendant le développement :
-npm run dev
+```dotenv
+TELEGRAM_BOT_TOKEN=votre_token_botfather
 ```
 
-## Webhook
+Le fichier `.env` reste local et ignoré par Git. Les variables définies dans
+l'environnement sont prioritaires. Le programme refuse de démarrer sans token.
 
-Configurer chez Meta l'URL publique HTTPS :
-`https://votre-domaine/webhook/messenger`.
-
-- `GET /webhook/messenger` renvoie le challenge en texte si le mode et le jeton
-  sont valides ; sinon, il renvoie `403`.
-- `POST /webhook/messenger` vérifie `x-hub-signature-256` par HMAC-SHA256 sur le
-  corps brut, puis lit le JSON. Une signature invalide renvoie `403`, un corps
-  invalide renvoie `400`, et un événement accepté renvoie `200`.
-
-Ne pas placer de middleware `express.json()` avant cette route : la vérification
-nécessite les octets originaux du corps JSON.
-
-## Tests
+## Lancement
 
 ```sh
+npm run dev # TypeScript avec redémarrage automatique
+npm start   # compilation puis lancement de dist/index.js
+```
+
+Ouvrir le bot dans Telegram et lui envoyer `/start`.
+Garder le processus actif pour qu'il reçoive les messages ; utiliser Ctrl+C pour
+l'arrêter. Lancer une seule instance en long polling avec le même token.
+grammY désactive un éventuel webhook Telegram lors du démarrage du polling,
+sans supprimer les événements en attente.
+
+## Comportement
+
+- `/start` présente le bot.
+- `/help` affiche les commandes disponibles.
+- Un message texte reçoit « Message reçu. ».
+- Les commandes inconnues, celles adressées à un autre bot et les messages
+  non textuels sont ignorés.
+
+Le traitement métier reste à implémenter dans `src/bot.ts`. Les erreurs sont
+journalisées sans afficher le token ni le contenu des messages.
+
+## Vérification
+
+```sh
+npm run typecheck
 npm test
+npm run build
 ```
 
-Les tests utilisent des identifiants fictifs et un serveur HTTP local temporaire.
+Les tests TypeScript simulent l'API Telegram avec un token fictif. Ils n'envoient
+aucun message réel.
+
+Documentation : [grammY](https://grammy.dev/guide/getting-started) et
+[API Telegram](https://core.telegram.org/bots/api).
